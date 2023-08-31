@@ -10,7 +10,7 @@ $currentDate = Get-Date -Format "MM-dd-yy -- HHmm"
 $ipInfo = get-netipconfiguration | Where-Object { $_.netadapter.status -ne "Disconnected" }
 
 ## Setup the file structure and verify nothing is missing
-$resultPath = "C:\BWIT\Network Test Log $currentDate.txt"
+$resultPath = "$PSScriptRoot\Network Test Log $currentDate.txt"
 if (!(Test-Path -Path $($resultPath.Split("\"))[0][1])) { New-Item -Path $($resultPath.Split("\"))[0][1] -ItemType Directory }
 New-Item -Path $resultPath -ItemType File
 
