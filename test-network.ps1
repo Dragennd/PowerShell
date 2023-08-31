@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 
-# this is a test commit
+# This is a test commit.
 ## Initialize global variables
 $ipAddresses = @()
 $counter = 0
