@@ -9,147 +9,218 @@
 
 
 ######################
+## Global Variables ##
+######################
+
+$Global:TenantOnMicrosoftDomain = "None"
+$Global:TenantName = "None"
+$Global:CurrentScript = "None"
+$Global:ConsoleMaxWidth = [Math]::Max(0, $Host.UI.RawUI.BufferSize.Width)
+
+
+
+######################
 ## Script Functions ##
 ######################
 
 # Start flow control functions
-function WriteMainEntryScreenToConsole {
-    WriteHeaderToConsole -CurrentScript "None"
-    WriteMenuToConsole
+function Invoke-MainEntryScreen {
+    Invoke-Header
+
+    if ($Global:TenantOnMicrosoftDomain -eq "None") {
+        Set-ActiveTenant
+    }
+
+    Invoke-Menu
 }
 
-function WriteHeaderToConsole {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$true)]
-        [string] $CurrentScript
-    )
+function Invoke-Header {
+    # Specify the title to display to the console
+    $Title = "M365 Script Collection"
 
-    $title = "M365 Script Collection"
-
-    $consoleMaxWidth = [Math]::Max(0, $Host.UI.RawUI.BufferSize.Width)
-    $titleMidPoint = [Math]::Floor($title.Length / 2)
-    $titlePosition = ($consoleMaxWidth / 2) - $titleMidpoint - 16
+    # Determine where on the console to display the header text
+    $TitleMidPoint = [Math]::Floor($Title.Length / 2)
+    $TitlePosition = ($Global:ConsoleMaxWidth / 2) - $TitleMidpoint - 14
+    $SecondTitleDivider = $TitlePosition
     
     # Write the header to the console
     Clear-Host
-    Write-Host ("{0}" -f ('-' * $consoleMaxWidth))
-    Write-Host "Current Script: " -NoNewline
-    Write-Host ("{0}{1}" -f ((' ' * $titlePosition), $title))
-    Write-Host $currentScript -ForegroundColor Blue
-    Write-Host ("{0}" -f ('-' * $consoleMaxWidth))
+    Write-Host ("{0}" -f ("$([char]0x2500)" * $ConsoleMaxWidth))
+    Write-Host ("{0}{1}{2}{3}{4}" -f ("Current Script", (' ' * $TitlePosition), $Title, (' ' * $SecondTitleDivider), "Current Tenant"))
+    Write-Host ("{0}{1}{2}" -f ($Global:CurrentScript, (' ' * ($Global:ConsoleMaxWidth - $CurrentScript.Length - $TenantName.Length)), $TenantName)) -ForegroundColor Blue
+    Write-Host ("{0}" -f ("$([char]0x2500)" * $Global:ConsoleMaxWidth))
 }
 
-function WriteMenuToConsole {
+function Invoke-Menu {
+    Clear-Host
+
+    Invoke-Header
     Write-Host ""
 
     # Exchange Online scripts
-    Write-Host "-- Exchange Online --" -ForegroundColor Cyan
-    Write-Host "[1] Convert User Mailbox to Shared Mailbox"
-    Write-Host "[2] Manage Mailbox Archive Status"
-    Write-Host "[3] Manage Message Size Restrictions"
-    Write-Host "[4] Manage Distribution Lists"
-    Write-Host "[5] Check Shared Mailbox Permissions"
-    Write-Host "[6] Check Mailbox Calendar Permissions"
+    Write-Host (" {0}{1}{2}{3}{4}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " Exchange Online ", ("$([char]0x2500)" * 30), "$([char]0x2510)")) -ForegroundColor Cyan
+    Write-Host "  [1]  Convert User Mailbox to Shared Mailbox"
+    Write-Host "  [2]  Manage Mailbox Archive Status"
+    Write-Host "  [3]  Manage Message Size Restrictions"
+    Write-Host "  [4]  Manage Distribution Lists"
+    Write-Host "  [5]  Check Shared Mailbox Permissions"
+    Write-Host "  [6]  Check Mailbox Calendar Permissions"
+    Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * 49), "$([char]0x2518)")) -ForegroundColor Cyan
     Write-Host ""
     
     # 365 Admin scripts
-    Write-Host "-- 365 Administration --" -ForegroundColor Cyan
-    Write-Host "[7] Manage Group Membership"
-    Write-Host "[8] Reset User Passwords"
-    Write-Host "[9] Duplicate User Permissions to Another User"
-    Write-Host "[10] User Offboarding"
+    Write-Host (" {0}{1}{2}{3}{4}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " 365 Administration ", ("$([char]0x2500)" * 27), "$([char]0x2510)")) -ForegroundColor Cyan
+    Write-Host "  [7]  Manage Group Membership"
+    Write-Host "  [8]  Reset User Passwords"
+    Write-Host "  [9]  Duplicate User Permissions to Another User"
+    Write-Host "  [10] User Offboarding"
+    Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * 49), "$([char]0x2518)")) -ForegroundColor Cyan
+
+    Write-Host ""
+    Write-Host "  [C]  Change Active Client"
+    Write-Host "  [X]  Exit"
+    Write-Host ""
     Write-Host ""
 
-    Write-Host "[X] Exit"
-    Write-Host ""
+    $Selection = Read-Host "Select a script to run"
 
-    $selection = Read-Host "Select a script to run"
-    ProcessMenuSelection -ScriptSelection $selection
+    if (![string]::IsNullOrWhiteSpace($Selection)) {
+        Get-MenuSelection -ScriptSelection $Selection
+    }
+    else {
+        Invoke-Menu
+    }
 }
 
-function ProcessMenuSelection {
+function Get-MenuSelection {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string] $ScriptSelection
     )
 
-    switch ($scriptSelection) {
-        "1" {ConvertUserMailboxToSharedMailbox -OnMicrosoftDomain "advfire.onmicrosoft.com" -ClientName "Advanced Fire Protection Services"}
-        "2" {}
-        "3" {}
-        "4" {}
-        "5" {}
-        "6" {}
-        "7" {}
-        "8" {}
-        "9" {}
-        "10" {}
-        default {Read-Host "Press any key to exit..."}
+    switch ($ScriptSelection) {
+        "1" {Set-MailboxType}
+        #"2" {}
+        #"3" {}
+        #"4" {}
+        #"5" {}
+        #"6" {}
+        #"7" {}
+        #"8" {}
+        #"9" {}
+        #"10" {}
+        "C" {Set-ActiveTenant}
+        "X" {
+            Write-Host "Exiting M365 Script Collection..."
+            Start-Sleep 1
+            Clear-Host
+            Exit
+        }
+        default {Invoke-Menu}
     }
+}
+
+function Set-ActiveTenant {
+    # Prompt for client selection from user and then add the values to the global variables
+    Clear-Host
+    Invoke-Header
+
+    Write-Host ""
+    Read-Host "Press [ENTER] to select a client"
+
+    $Global:TenantOnMicrosoftDomain = "advfire.onmicrosoft.com"
+    $Global:TenantName = "Advanced Fire Protection Services"
+
+    Invoke-Menu
 }
 # End flow control functions
 
 # Start script activation functions
-function ConvertUserMailboxToSharedMailbox {
+function Set-MailboxType {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true)]
-        [string] $OnMicrosoftDomain,
-        [Parameter(Mandatory=$true)]
-        [string] $ClientName,
         [Parameter(Mandatory=$false)]
         [bool] $ActiveSession
     )
     
     begin {
         if ($ActiveSession -ne $true) {
-            Connect-ExchangeOnline -DelegatedOrganization $OnMicrosoftDomain
+            if ($Global:TenantOnMicrosoftDomain -ne "None") {
+                Connect-ExchangeOnline -DelegatedOrganization $Global:TenantOnMicrosoftDomain
+            }
+            else {
+                Set-ActiveTenant
+            }
         }
     }
     
     process {
         do {
-            WriteHeaderToConsole -CurrentScript "Convert User Mailbox to Shared Mailbox"
-            Write-Host ""
-            Write-Host "Active Client: " -NoNewline
-            Write-Host $ClientName -ForegroundColor Blue
-            Write-Host ""
+            $Global:CurrentScript = "Convert User Mailbox to Shared Mailbox"
+            
+            Clear-Host
+            Invoke-Header
 
+            Write-Host ""
             Read-Host "Press [ENTER] to select a User Mailbox"
-            $user = Get-EXOMailbox | Select-Object DisplayName,UserPrincipalName,PrimarySMTPAddress,RecipientType,GUID | Out-GridView -OutputMode Single
+            $SelectedUser = Get-EXOMailbox | Select-Object DisplayName,UserPrincipalName,PrimarySMTPAddress,RecipientType,GUID | Out-GridView -OutputMode Single
 
             Clear-Host
-            WriteHeaderToConsole -CurrentScript "Convert User Mailbox to Shared Mailbox"
+            $Global:CurrentScript = "Convert User Mailbox to Shared Mailbox"
+            Invoke-Header
+
             Write-Host ""
-            Write-Host "Active Client: " -NoNewline
-            Write-Host $ClientName -ForegroundColor Blue
-            Write-Host "Selected User: " -NoNewline
-            Write-Host $user.DisplayName -ForegroundColor Blue
+            Write-Host (" {0}{1}{2}{3}{4}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " Selected Client Info ", ("$([char]0x2500)" * 26), "$([char]0x2510)")) -ForegroundColor Cyan
+            Write-Host "  Current Client"
+            Write-Host "     $Global:TenantName" -ForegroundColor Blue
+            Write-Host ""
+            Write-Host "  Selected User"
+            Write-Host "     $($SelectedUser.DisplayName)" -ForegroundColor Blue
+            Write-Host "     $($SelectedUser.PrimarySMTPAddress)" -ForegroundColor Blue
+            Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * 50), "$([char]0x2518)")) -ForegroundColor Cyan
             Write-Host ""
 
-            $selection = Read-Host "Is the above selection correct? [Y] or [N]"
-        } while ($selection -ne 'Y')
+            $Selection = Read-Host "Is the above selection correct? [Y] or [N]"
 
+            if ($Selection -eq 'N') {
+                Write-Host ""
+                Write-Host "  [C] Change User"
+                Write-Host "  [X] Return to Main Menu"
+                Write-Host ""
+
+                do {
+                    $NewSelection = Read-Host "Select an option"
+    
+                    switch ($NewSelection) {
+                        "C" {break}
+                        "X" {Invoke-Menu}
+                    }
+                } while ($NewSelection -ne 'C' -and $NewSelection -ne 'X')
+            }
+        } while ($Selection -ne 'Y')
+
+        Write-Host ""
         Write-Host "Converting Mailbox..."
         Write-Host ""
-        # Run cmdlet to convert the mailbox from user to shared
-        # Add error handling - if mailbox conversion fails, display error - otherwise display success message
+
+        Set-Mailbox -Identity $SelectedUser.GUID -Type Shared
+
         Write-Host ""
     }
     
     end {
         do {
-            $endingPrompt = Read-Host "Convert another mailbox within $($ClientName)? [Y] or [N]"
-        } while ($endingPrompt -ne 'Y' -and $endingPrompt -ne 'N')
+            $EndingPrompt = Read-Host "Convert another mailbox within $($TenantName)? [Y] or [N]"
+        } while ($EndingPrompt -ne 'Y' -and $EndingPrompt -ne 'N')
 
-        if ($endingPrompt -eq 'Y') {
-            ConvertUserMailboxToSharedMailbox -OnMicrosoftDomain $OnMicrosoftDomain -ClientName $ClientName -ActiveSession $true
+        if ($EndingPrompt -eq 'Y') {
+            Set-MailboxType -ActiveSession $true
         }
         else {
             Disconnect-ExchangeOnline -Confirm:$false
-            WriteMainEntryScreenToConsole
+            $Global:CurrentScript = "None"
+            Invoke-MainEntryScreen
         }
     }
 }
@@ -161,4 +232,4 @@ function ConvertUserMailboxToSharedMailbox {
 ## Script Flow ##
 #################
 
-WriteMainEntryScreenToConsole
+Invoke-MainEntryScreen
