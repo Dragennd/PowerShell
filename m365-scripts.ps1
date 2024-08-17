@@ -77,7 +77,7 @@ function Invoke-Menu {
     Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * 49), "$([char]0x2518)")) -ForegroundColor Cyan
 
     Write-Host ""
-    Write-Host "  [C]  Change Active Client"
+    Write-Host "  [C]  Change Active Tenant"
     Write-Host "  [X]  Exit"
     Write-Host ""
     Write-Host ""
@@ -127,7 +127,7 @@ function Set-ActiveTenant {
     Invoke-Header
 
     Write-Host ""
-    Read-Host "Press [ENTER] to select a client"
+    Read-Host "Press [ENTER] to select a Tenant"
 
     $Global:TenantOnMicrosoftDomain = "advfire.onmicrosoft.com"
     $Global:TenantName = "Advanced Fire Protection Services"
@@ -172,7 +172,7 @@ function Set-MailboxType {
 
             Write-Host ""
             Write-Host (" {0}{1}{2}{3}{4}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " Selected Client Info ", ("$([char]0x2500)" * 26), "$([char]0x2510)")) -ForegroundColor Cyan
-            Write-Host "  Current Client"
+            Write-Host "  Current Tenant"
             Write-Host "     $Global:TenantName" -ForegroundColor Blue
             Write-Host ""
             Write-Host "  Selected User"
