@@ -134,6 +134,41 @@ function Set-ActiveTenant {
 
     Invoke-Menu
 }
+
+function Show-SelectedUserInfo {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [object] $SelectedUser
+    )
+
+    $UserDataLengths = @($Global:TenantName.Length, $SelectedUser.DisplayName.Length, $SelectedUser.PrimarySMTPAddress.Length)
+    $LongestString = 0
+    $TopBarLength = 2
+    $BottomBarLength = 26
+
+    foreach ($Count in $UserDataLengths) {
+        if ($Count -gt $LongestString) {
+            $LongestString = $Count
+        }
+    }
+
+    if ($LongestString -ge 26) {
+        $TopBarLength = $LongestString - 20
+        $BottomBarLength = $LongestString + 4
+    }
+
+    Write-Host ""
+    Write-Host (" {0}{1}{2}{3}{4}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " Selected Client Info ", ("$([char]0x2500)" * $TopBarLength), "$([char]0x2510)")) -ForegroundColor Cyan
+    Write-Host "  Selected Tenant"
+    Write-Host "     $Global:TenantName" -ForegroundColor Blue
+    Write-Host ""
+    Write-Host "  Selected User"
+    Write-Host "     $($SelectedUser.DisplayName)" -ForegroundColor Blue
+    Write-Host "     $($SelectedUser.PrimarySMTPAddress)" -ForegroundColor Blue
+    Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * $BottomBarLength), "$([char]0x2518)")) -ForegroundColor Cyan
+    Write-Host ""
+}
 # End flow control functions
 
 # Start script activation functions
@@ -170,16 +205,8 @@ function Set-MailboxType {
             $Global:CurrentScript = "Convert User Mailbox to Shared Mailbox"
             Invoke-Header
 
-            Write-Host ""
-            Write-Host (" {0}{1}{2}{3}{4}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " Selected Client Info ", ("$([char]0x2500)" * 26), "$([char]0x2510)")) -ForegroundColor Cyan
-            Write-Host "  Current Tenant"
-            Write-Host "     $Global:TenantName" -ForegroundColor Blue
-            Write-Host ""
-            Write-Host "  Selected User"
-            Write-Host "     $($SelectedUser.DisplayName)" -ForegroundColor Blue
-            Write-Host "     $($SelectedUser.PrimarySMTPAddress)" -ForegroundColor Blue
-            Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * 50), "$([char]0x2518)")) -ForegroundColor Cyan
-            Write-Host ""
+            # Display the currently selected user and related info
+            Show-SelectedUserInfo -SelectedUser $SelectedUser
 
             $Selection = Read-Host "Is the above selection correct? [Y] or [N]"
 
