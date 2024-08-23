@@ -92,7 +92,7 @@ function Invoke-Menu {
     Write-Host ""
     Write-Host ""
 
-    $Selection = Read-Host "Select a script to run"
+    $Selection = Read-Host " Select a script to run"
 
     if (![string]::IsNullOrWhiteSpace($Selection)) {
         Get-MenuSelection -ScriptSelection $Selection
@@ -126,7 +126,7 @@ function Get-MenuSelection {
         #"10" {}
         "C" {Set-ActiveTenant}
         "X" {
-            Write-Host "Exiting M365 Script Collection..."
+            Write-Host " Exiting M365 Script Collection..."
             Start-Sleep 1
             Clear-Host
             Exit
@@ -145,7 +145,7 @@ function Set-ActiveTenant {
     Invoke-Header
 
     Write-Host ""
-    Read-Host "Press [ENTER] to select a Tenant"
+    Read-Host " Press [ENTER] to select a Tenant"
 
     $Global:TenantOnMicrosoftDomain = "advfire.onmicrosoft.com"
     $Global:TenantName = "Advanced Fire Protection Services"
@@ -193,6 +193,68 @@ function Show-SelectedUserInfo {
 }
 
 ## ^- End of Selected User Info --------------------^ ##
+##                                                    ##
+## v- Start of Selected User Info w/ Mailboxes -----v ##
+
+function Show-SelectedUserWithMailboxes {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [object] $SelectedUser
+    )
+
+    # Mailbox Usage Info
+    $MailboxStatistics = $SelectedUser | Get-EXOMailboxStatistics
+    $MailboxTotalBytes = ($MailboxStatistics.TotalItemSize.Value -split ' ')[2].Trim('(') -replace ',', ''
+    $MailboxMaxBytes = ($SelectedUser.ProhibitSendQuota -split ' ')[2].Trim('(') -replace ',', ''
+    $MailboxUsage = [Math]::Round(($MailboxTotalBytes / $MailboxMaxBytes) * 100, 2)
+    $MailboxTitle = " Mailbox Usage [$($MailboxUsage)%] "
+    $MailboxTopBarLength = 50 - 2 - $MailboxTitle.Length
+    $Count = $MailboxUsage
+    $MailboxPercentageBar = " "
+
+    while ($Count -gt 0) {
+        $MailboxPercentageBar += "$([char]0x2503)"
+        $Count -= 2
+    }
+
+    # Archive Usage Info
+    if ($SelectedUser.ArchiveStatus -eq "Active") {
+        $ArchiveStatistics = $SelectedUser | Get-EXOMailboxStatistics -Archive
+        $ArchiveTotalBytes = ($ArchiveStatistics.TotalItemSize.Value -split ' ')[2].Trim('(') -replace ',', ''
+        $ArchiveMaxBytes = ($SelectedUser.ProhibitSendQuota -split ' ')[2].Trim('(') -replace ',', ''
+        $ArchiveUsage = [Math]::Round(($ArchiveTotalBytes / $ArchiveMaxBytes) * 100, 2)
+        $Count = $ArchiveUsage
+        $ArchivePercentageBar = " "
+
+        while ($Count -gt 0) {
+            $ArchivePercentageBar += "$([char]0x2503)"
+            $Count -= 2
+        }
+    } else {
+        $ArchiveUsage = "0.0"
+        $ArchivePercentageBar = " Disabled"
+    }
+
+    $ArchiveTitle = " Archive Usage [$($ArchiveUsage)%] "
+    $ArchiveTopBarLength = 50 - 2 - $ArchiveTitle.Length
+    
+    # Display the currently selected user and related info
+    Write-Host ""
+    Write-Host (" {0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " Selected Client Info ", ("$([char]0x2500)" * 32), "$([char]0x2510)", (" " * 6), "$([char]0x250C)", ("$([char]0x2500)" * 2), $MailboxTitle, ("$([char]0x2500)" * $MailboxTopBarLength), "$([char]0x2510)")) -ForegroundColor Cyan
+    Write-Host ("  {0}{1}{2}" -f ("Selected Tenant", (" " * 48), $MailboxPercentageBar))
+    Write-Host "     $Global:TenantName" -ForegroundColor Blue -NoNewline
+    Write-Host (" {0}{1}{2}{3}" -f ((" " * (63 - ($Global:TenantName.Length + 4))), "$([char]0x2514)", ("$([char]0x2500)" * 50), "$([char]0x2518)")) -ForegroundColor Cyan
+    Write-Host (" {0}{1}{2}{3}{4}{5}" -f ((" " * 64), "$([char]0x250C)", ("$([char]0x2500)" * 2), $ArchiveTitle, ("$([char]0x2500)" * $ArchiveTopBarLength), "$([char]0x2510)")) -ForegroundColor Cyan
+    Write-Host ("  {0}{1}{2}" -f ("Selected User", (" " * 50), $ArchivePercentageBar))
+    Write-Host "     $($SelectedUser.DisplayName)" -ForegroundColor Blue -NoNewline
+    Write-Host (" {0}{1}{2}{3}" -f ((" " * (63 - $($SelectedUser.DisplayName.Length + 4))), "$([char]0x2514)", ("$([char]0x2500)" * 50), "$([char]0x2518)")) -ForegroundColor Cyan
+    Write-Host "     $($SelectedUser.PrimarySMTPAddress)" -ForegroundColor Blue
+    Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * 56), "$([char]0x2518)")) -ForegroundColor Cyan
+    Write-Host ""
+}
+
+## ^- End of Selected User Info w/ Mailboxes -------^ ##
 ########################################################
 
 ########################################################
@@ -202,7 +264,7 @@ function Show-SelectedUserInfo {
 
 
 ########################################################
-## Start primary functionality scripts #################
+## Start primary functions #############################
 ########################################################
 
 ########################################################
@@ -218,7 +280,10 @@ function Set-MailboxType {
     begin {
         if ($ActiveSession -ne $true) {
             if ($Global:TenantOnMicrosoftDomain -ne "None") {
-                Connect-ExchangeOnline -DelegatedOrganization $Global:TenantOnMicrosoftDomain
+                Write-Host ""
+                Write-Host " Connecting to $($Global:TenantName)'s Exchange Online Tenant..."
+                Write-Host ""
+                Connect-ExchangeOnline -DelegatedOrganization $Global:TenantOnMicrosoftDomain -ShowBanner:$false
             }
             else {
                 Set-ActiveTenant
@@ -234,7 +299,10 @@ function Set-MailboxType {
             Invoke-Header
 
             Write-Host ""
-            Read-Host "Press [ENTER] to select a User Mailbox"
+            if ($ActiveSession -ne $true) {
+                Read-Host " Press [ENTER] to select a User Mailbox"
+            }
+            Write-Host " Loading user selection window..."
             $SelectedUser = Get-EXOMailbox | Select-Object DisplayName,UserPrincipalName,PrimarySMTPAddress,RecipientType,GUID | Out-GridView -OutputMode Single
 
             Clear-Host
@@ -243,7 +311,7 @@ function Set-MailboxType {
             # Display the currently selected user and related info
             Show-SelectedUserInfo -SelectedUser $SelectedUser
 
-            $Selection = Read-Host "Is the above selection correct? [Y] or [N]"
+            $Selection = Read-Host " Is the above selection correct? [Y] or [N]"
 
             if ($Selection -eq 'N') {
                 Write-Host ""
@@ -252,7 +320,7 @@ function Set-MailboxType {
                 Write-Host ""
 
                 do {
-                    $NewSelection = Read-Host "Select an option"
+                    $NewSelection = Read-Host " Select an option"
     
                     switch ($NewSelection) {
                         "C" {break}
@@ -263,7 +331,7 @@ function Set-MailboxType {
         } while ($Selection -ne 'Y')
 
         Write-Host ""
-        Write-Host "Converting Mailbox..."
+        Write-Host " Converting $($SelectedUser.DisplayName)'s Mailbox..."
         Write-Host ""
 
         Set-Mailbox -Identity $SelectedUser.GUID -Type Shared -WhatIf
@@ -273,13 +341,16 @@ function Set-MailboxType {
     
     end {
         do {
-            $EndingPrompt = Read-Host "Convert another mailbox within $($TenantName)? [Y] or [N]"
+            $EndingPrompt = Read-Host " Convert another mailbox within $($TenantName)? [Y] or [N]"
         } while ($EndingPrompt -ne 'Y' -and $EndingPrompt -ne 'N')
 
         if ($EndingPrompt -eq 'Y') {
             Set-MailboxType -ActiveSession $true
         }
         else {
+            Write-Host ""
+            Write-Host " Disconnecting from $($Global:TenantName)'s Exchange Online Tenant..."
+            Write-Host ""
             Disconnect-ExchangeOnline -Confirm:$false
             $Global:CurrentScript = "None"
             Invoke-MainEntryScreen
@@ -295,13 +366,18 @@ function Get-MailboxArchiveStatus {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$false)]
-        [bool] $ActiveSession
+        [bool] $ActiveSession,
+        [Parameter(Mandatory=$false)]
+        [object] $SelectedUser
     )
     
     begin {
         if ($ActiveSession -ne $true) {
             if ($Global:TenantOnMicrosoftDomain -ne "None") {
-                Connect-ExchangeOnline -DelegatedOrganization $Global:TenantOnMicrosoftDomain
+                Write-Host ""
+                Write-Host " Connecting to $($Global:TenantName)'s Exchange Online Tenant..."
+                Write-Host ""
+                Connect-ExchangeOnline -DelegatedOrganization $Global:TenantOnMicrosoftDomain -ShowBanner:$false
             }
             else {
                 Set-ActiveTenant
@@ -311,68 +387,25 @@ function Get-MailboxArchiveStatus {
 
     process {
         $Global:CurrentScript = "Manage Mailbox Archive"
-            
-        Clear-Host
-        Invoke-Header
-
-        Write-Host ""
-        Read-Host "Press [ENTER] to select a User Mailbox"
-        $User = Get-EXOMailbox -Property All | Select-Object DisplayName,PrimarySMTPAddress,RecipientType,GUID,ProhibitSendQuota,ArchiveQuota | Out-GridView -OutputMode Single -Title "Select User"
-        $SelectedUser = Get-EXOMailbox -Identity $User.PrimarySMTPAddress -Property All
-
-        Clear-Host
-        Invoke-Header
-
-        # Mailbox Usage Info
-        $MailboxStatistics = $SelectedUser | Get-EXOMailboxStatistics
-        $MailboxTotalBytes = ($MailboxStatistics.TotalItemSize.Value -split ' ')[2].Trim('(') -replace ',', ''
-        $MailboxMaxBytes = ($SelectedUser.ProhibitSendQuota -split ' ')[2].Trim('(') -replace ',', ''
-        $MailboxUsage = [Math]::Round(($MailboxTotalBytes / $MailboxMaxBytes) * 100, 2)
-        $MailboxTitle = " Mailbox Usage [$($MailboxUsage)%] "
-        $TopBarLength = 50 - 2 - $MailboxTitle.Length
-        $Count = $MailboxUsage
-        $MailboxPercentageBar = " "
-
-        while ($Count -gt 0) {
-            $MailboxPercentageBar += "$([char]0x2503)"
-            $Count -= 2
-        }
-
-        # Archive Usage Info
-        if ($SelectedUser.ArchiveStatus -eq "Active") {
-            $ArchiveStatistics = $SelectedUser | Get-EXOMailboxStatistics -Archive
-            $ArchiveTotalBytes = ($ArchiveStatistics.TotalItemSize.Value -split ' ')[2].Trim('(') -replace ',', ''
-            $ArchiveMaxBytes = ($SelectedUser.ProhibitSendQuota -split ' ')[2].Trim('(') -replace ',', ''
-            $ArchiveUsage = [Math]::Round(($ArchiveTotalBytes / $ArchiveMaxBytes) * 100, 2)
-            $Count = $ArchiveUsage
-            $ArchivePercentageBar = " "
-
-            while ($Count -gt 0) {
-                $ArchivePercentageBar += "$([char]0x2503)"
-                $Count -= 2
-            }
-        } else {
-            $ArchiveUsage = "0.0"
-            $ArchivePercentageBar = " Disabled"
-        }
-
-        $ArchiveTitle = " Archive Usage [$($ArchiveUsage)%] "
-        $TopBarLength = 50 - 2 - $ArchiveTitle.Length
         
-        # Display the currently selected user and related info
-        Write-Host ""
-        Write-Host (" {0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}" -f ("$([char]0x250C)", ("$([char]0x2500)" * 2), " Selected Client Info ", ("$([char]0x2500)" * 32), "$([char]0x2510)", (" " * 6), "$([char]0x250C)", ("$([char]0x2500)" * 2), $MailboxTitle, ("$([char]0x2500)" * $TopBarLength), "$([char]0x2510)")) -ForegroundColor Cyan
-        Write-Host ("  {0}{1}{2}" -f ("Selected Tenant", (" " * 48), $MailboxPercentageBar))
-        Write-Host "     $Global:TenantName" -ForegroundColor Blue -NoNewline
-        Write-Host (" {0}{1}{2}{3}" -f ((" " * (63 - ($Global:TenantName.Length + 4))), "$([char]0x2514)", ("$([char]0x2500)" * 50), "$([char]0x2518)")) -ForegroundColor Cyan
-        Write-Host (" {0}{1}{2}{3}{4}{5}" -f ((" " * 64), "$([char]0x250C)", ("$([char]0x2500)" * 2), $ArchiveTitle, ("$([char]0x2500)" * $TopBarLength), "$([char]0x2510)")) -ForegroundColor Cyan
-        Write-Host ("  {0}{1}{2}" -f ("Selected User", (" " * 50), $ArchivePercentageBar))
-        Write-Host "     $($SelectedUser.DisplayName)" -ForegroundColor Blue -NoNewline
-        Write-Host (" {0}{1}{2}{3}" -f ((" " * (63 - $($SelectedUser.DisplayName.Length + 4))), "$([char]0x2514)", ("$([char]0x2500)" * 50), "$([char]0x2518)")) -ForegroundColor Cyan
-        Write-Host "     $($SelectedUser.PrimarySMTPAddress)" -ForegroundColor Blue
-        Write-Host (" {0}{1}{2}" -f ("$([char]0x2514)", ("$([char]0x2500)" * 56), "$([char]0x2518)")) -ForegroundColor Cyan
-        Write-Host ""
+        if ($null -eq $SelectedUser) {
+            Clear-Host
+            Invoke-Header
 
+            Write-Host ""
+            if ($ActiveSession -ne $true) {
+                Read-Host " Press [ENTER] to select a User Mailbox"
+            }
+            Write-Host " Loading user selection window..."
+            $User = Get-EXOMailbox -Property All | Select-Object DisplayName,PrimarySMTPAddress,RecipientType,GUID | Out-GridView -OutputMode Single -Title "Select User"
+            $SelectedUser = Get-EXOMailbox -Identity $User.PrimarySMTPAddress -Property All
+        }
+
+        Clear-Host
+        Invoke-Header
+        Show-SelectedUserWithMailboxes -SelectedUser $SelectedUser
+
+        # Prompt the user which function to run
         Write-Host ""
         Write-Host "  [1] Enable/Disable Mailbox Archive"
         Write-Host "  [2] Enable Auto-Expanding Archive"
@@ -390,7 +423,7 @@ function Get-MailboxArchiveStatus {
             # to-do:
             # Make individual functions for each of these 3 options and then make a new parameter for the main function to be able to
             # recursively call the function again while reusing the current selections (unless option C is chosen)
-            "1" {}
+            "1" {Set-MailboxArchiveStatus -SelectedUser $SelectedUser}
             "2" {}
             "3" {}
             "C" {Get-MailboxArchiveStatus -ActiveSession $true}
@@ -409,7 +442,67 @@ function Get-MailboxArchiveStatus {
 ########################################################
 
 ########################################################
-## End primary functionality scripts####################
+## End primary functions ###############################
+########################################################
+
+
+
+########################################################
+## Start secondary functions ###########################
+########################################################
+
+function Set-MailboxArchiveStatus {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [object] $SelectedUser
+    )
+
+    Clear-Host
+    Invoke-Header
+    Show-SelectedUserWithMailboxes -SelectedUser $SelectedUser
+
+    if ($SelectedUser.ArchiveStatus -eq "Active") {
+        $ArchiveStatus = "Enabled"
+    } else {
+        $ArchiveStatus = "Disabled"
+    }
+
+    Write-Host " The Archive status for $($SelectedUser.DisplayName) is currently $ArchiveStatus."
+    Write-Host ""
+    if ($ArchiveStatus -eq "Enabled") {
+        $ConfirmPrompt = Read-Host " Would you like to disable it? [Y] or [N]"
+        if ($ConfirmPrompt -eq 'Y') {
+            $SelectedUser | Disable-Mailbox -Archive -Confirm:$false -WhatIf
+            Pause
+            Clear-Host
+            Get-MailboxArchiveStatus -ActiveSession $true
+        } else {
+            Write-Host " Returning to previous menu."
+            Write-Host ""
+            Pause
+            Clear-Host
+            Get-MailboxArchiveStatus -ActiveSession $true -SelectedUser $SelectedUser
+        }
+    } else {
+        $ConfirmPrompt = Read-Host " Would you like to enable it? [Y] or [N]"
+        if ($ConfirmPrompt -eq 'Y') {
+            $SelectedUser | Enable-Mailbox -Archive -Confirm:$false -WhatIf
+            Pause
+            Clear-Host
+            Get-MailboxArchiveStatus -ActiveSession $true -SelectedUser $SelectedUser
+        } else {
+            Write-Host " Returning to previous menu."
+            Write-Host ""
+            Pause
+            Clear-Host
+            Get-MailboxArchiveStatus -ActiveSession $true
+        }
+    }
+}
+
+########################################################
+## End secondary functions #############################
 ########################################################
 
 
