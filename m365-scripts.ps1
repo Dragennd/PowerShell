@@ -1,7 +1,3 @@
-# Created by: tim.herndon@bit-wizards.com
-# Created on: 8/12/2024
-# Last Updated: 8/22/2024
-
 # Colors
 # Blue - Data specific to active modes
 # Cyan - Headers for menu sections
@@ -147,8 +143,8 @@ function Set-ActiveTenant {
     Write-Host ""
     Read-Host " Press [ENTER] to select a Tenant"
 
-    $Global:TenantOnMicrosoftDomain = "advfire.onmicrosoft.com"
-    $Global:TenantName = "Advanced Fire Protection Services"
+    $Global:TenantOnMicrosoftDomain = "<tenant name>.onmicrosoft.com"
+    $Global:TenantName = ""
 
     Invoke-Menu
 }
@@ -424,8 +420,8 @@ function Get-MailboxArchiveStatus {
             # Make individual functions for each of these 3 options and then make a new parameter for the main function to be able to
             # recursively call the function again while reusing the current selections (unless option C is chosen)
             "1" {Set-MailboxArchiveStatus -SelectedUser $SelectedUser}
-            "2" {}
-            "3" {}
+            "2" {Enable-AutoExpandingArchiveFeature -SelectedUser $SelectedUser}
+            "3" {Start-ManagedFolderAssistantFeature -SelectedUser $SelectedUser}
             "C" {Get-MailboxArchiveStatus -ActiveSession $true}
             "X" {continue}
         }
@@ -450,6 +446,9 @@ function Get-MailboxArchiveStatus {
 ########################################################
 ## Start secondary functions ###########################
 ########################################################
+
+########################################################
+## v- Start of Set Archive Status ------------------v ##
 
 function Set-MailboxArchiveStatus {
     [CmdletBinding()]
@@ -500,6 +499,41 @@ function Set-MailboxArchiveStatus {
         }
     }
 }
+
+## ^- End of Set Archive Status --------------------^ ##
+##                                                    ##
+## v- Start of Enable Auto Expanding Archive -------v ##
+
+function Enable-AutoExpandingArchiveFeature {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [object] $SelectedUser
+    )
+
+    # Add line informing the user about how once enabled it can't be disabled
+    # Add code to enable the AutoExpandingArchive following user confirmation of the above information
+    # and if declined, return back to the previous menu
+}
+
+## ^- End of Enable Auto Expanding Archive ---------^ ##
+##                                                    ##
+## v- Start of Start Managed Folder Assistant ------v ##
+
+function Start-ManagedFolderAssistantFeature {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [object] $SelectedUser
+    )
+
+    # Add code to inform the user what the Managed Folder Assistant is
+    # Add code to start the Managed Folder Assistant following user confirmation of the above information
+    # and if declined, return back to the previous menu
+}
+
+## ^- End of Start Managed Folder Assistant --------^ ##
+########################################################
 
 ########################################################
 ## End secondary functions #############################
