@@ -1,0 +1,2 @@
+# Displays the owner of all files and folders within the current directory
+foreach ($item in Get-ChildItem -Recurse) { Write-Host ("Owner: {0}  -  Path: {1}" -f (Get-Acl $item.FullName).Owner, $item.FullName) }
